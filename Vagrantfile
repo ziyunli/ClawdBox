@@ -1,10 +1,21 @@
 vm_name = File.basename(Dir.getwd)
 
-Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-24.04"
+# Load .env file manually (replaces vagrant-env plugin)
+if File.exist?('.env')
+  File.readlines('.env').each do |line|
+    line = line.strip
+    next if line.empty? || line.start_with?('#')
+    key, value = line.split('=', 2)
+    ENV[key] = value if key && value
+  end
+end
 
-  #config.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
-  config.vm.synced_folder ".", "/agent-workspace", type: "virtualbox"
+Vagrant.configure("2") do |config|
+  config.vm.box = ENV['VM_BOX']
+
+  config.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
+  config.vm.network "forwarded_port", guest: 18789, host: 18789
+  config.vm.synced_folder "./shared", "/agent-workspace", type: "virtualbox"
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "4096"
@@ -24,6 +35,13 @@ Vagrant.configure("2") do |config|
 
     usermod -aG docker vagrant
     chown -R vagrant:vagrant /agent-workspace
-
   SHELL
+
+  config.vm.provision "tailscale-install", type: "shell" do |s|
+    s.inline = "curl -fsSL https://tailscale.com/install.sh | sh"
+  end
+
+  config.vm.provision "tailscale-up", type: "shell" do |s|
+    s.inline = "tailscale up --ssh --operator=vagrant --authkey #{ENV['TAILSCALE_AUTHKEY']}"
+  end
 end
