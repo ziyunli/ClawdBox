@@ -31,38 +31,41 @@ Vagrant.configure("2") do |config|
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
-    apt-get install -y docker.io nodejs npm git unzip
-
-    curl -fsSL https://claude.ai/install.sh | bash
-    curl -fsSL https://ampcode.com/install.sh | bash
-    npm i -g @openai/codex @google/gemini-cli @mariozechner/pi-coding-agent
+    apt-get install -y docker.io git unzip
 
     usermod -aG docker vagrant
 
     chown -R vagrant:vagrant /agent-workspace
     chown -R vagrant:vagrant /openclaw-workspace
 
-    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-    ~/.fzf/install
+    curl -fsSL https://tailscale.com/install.sh | sh
+    tailscale up --ssh --operator=vagrant --authkey #{ENV['TAILSCALE_AUTHKEY']}
   SHELL
 
-  config.vm.provision "tailscale-install", type: "shell" do |s|
-    s.inline = "curl -fsSL https://tailscale.com/install.sh | sh"
-  end
+  config.vm.provision "shell", inline: <<-SHELL, privileged: false
+    whoami
 
-  config.vm.provision "tailscale-up", type: "shell" do |s|
-    s.inline = "tailscale up --ssh --operator=vagrant --authkey #{ENV['TAILSCALE_AUTHKEY']}"
-  end
+    # Download and install nvm:
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    # in lieu of restarting the shell
+    \. "$HOME/.nvm/nvm.sh"
+    # Download and install Node.js:
+    nvm install 24
+    # Verify the Node.js version:
+    node -v # Should print "v24.13.0".
+    # Verify npm version:
+    npm -v # Should print "11.6.2".
 
-  # When Tailscale is installed in the VM, it configures MagicDNS (100.100.100.100)
-  # as the DNS resolver. This can break external DNS resolution (e.g., api.telegram.org)
-  # if your Tailscale network doesn't have global nameservers configured,
-  # or if the configuration doesn't propagate correctly.
-  # To revert:
-  # sudo resolvectl revert eth0
-  # sudo systemctl restart systemd-resolved
-  # dig @100.100.100.100 api.telegram.org
-  config.vm.provision "fix-dns", type: "shell" do |s|
-    s.inline = "resolvectl dns eth0 1.1.1.1 8.8.8.8"
+    curl -fsSL https://claude.ai/install.sh | bash
+    curl -fsSL https://ampcode.com/install.sh | bash
+    npm i -g @openai/codex @google/gemini-cli @mariozechner/pi-coding-agent
+
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --all
+  SHELL
+
+  config.trigger.before :destroy do |trigger|
+    trigger.run_remote = {inline: "tailscale logout"}
+    trigger.on_error = :continue
   end
 end
