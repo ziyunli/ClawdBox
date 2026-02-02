@@ -41,6 +41,9 @@ Vagrant.configure("2") do |config|
 
     chown -R vagrant:vagrant /agent-workspace
     chown -R vagrant:vagrant /openclaw-workspace
+
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install
   SHELL
 
   config.vm.provision "tailscale-install", type: "shell" do |s|
