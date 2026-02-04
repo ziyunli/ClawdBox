@@ -13,8 +13,6 @@ end
 Vagrant.configure("2") do |config|
   config.vm.box = ENV['VM_BOX']
 
-  config.vm.network "forwarded_port", guest: 3000, host: 3000, auto_correct: true
-
   # SSH tunnel for localhost-only services (standard port forwarding doesn't work for 127.0.0.1-bound services)
   # Note: Tunnel is only active while `vagrant ssh` session is open
   config.ssh.extra_args = ["-L", "18789:127.0.0.1:18789"]
