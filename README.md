@@ -22,6 +22,9 @@ vagrant ssh
 ### OpenClaw
 
 ```sh
+# Install Homebrew
 curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+
+# Install and configure OpenClaw
 curl -fsSL https://openclaw.ai/install.sh | bash
 ```
