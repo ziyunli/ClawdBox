@@ -3,10 +3,12 @@ vm_name = File.basename(Dir.getwd)
 # Load .env file manually (replaces vagrant-env plugin)
 if File.exist?('.env')
   File.readlines('.env').each do |line|
-    line = line.strip
+    line = line.strip.sub(/\Aexport\s+/, '')
     next if line.empty? || line.start_with?('#')
     key, value = line.split('=', 2)
-    ENV[key] = value if key && value
+    next unless key && value
+    # Strip a single pair of surrounding quotes, matching shell behaviour
+    ENV[key.strip] = value.strip.gsub(/\A["']|["']\z/, '')
   end
 end
 
@@ -15,11 +17,13 @@ Vagrant.configure("2") do |config|
 
   # SSH tunnel for localhost-only services (standard port forwarding doesn't work for 127.0.0.1-bound services)
   # Note: Tunnel is only active while `vagrant ssh` session is open
+  # Change 18789 to whatever port the agent service binds to inside the box
   config.ssh.extra_args = ["-L", "18789:127.0.0.1:18789"]
   config.vm.synced_folder "./agent-workspace", "/agent-workspace", type: "virtualbox"
   config.vm.synced_folder "./openclaw-workspace", "/openclaw-workspace", type: "virtualbox"
 
   config.vm.provider "virtualbox" do |vb|
+    # Sized for a single agent at a time; bump both if you run several concurrently
     vb.memory = "4096"
     vb.cpus = 2
     vb.gui = false
@@ -52,10 +56,9 @@ Vagrant.configure("2") do |config|
     \. "$HOME/.nvm/nvm.sh"
     # Download and install Node.js:
     nvm install 24
-    # Verify the Node.js version:
-    node -v # Should print "v24.13.0".
-    # Verify npm version:
-    npm -v # Should print "11.6.2".
+    # Print the installed Node.js and npm versions:
+    node -v
+    npm -v
 
     curl -fsSL https://claude.ai/install.sh | bash
     curl -fsSL https://ampcode.com/install.sh | bash
