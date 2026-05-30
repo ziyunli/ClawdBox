@@ -11,7 +11,7 @@ if File.exist?('.env')
 end
 
 Vagrant.configure("2") do |config|
-  config.vm.box = ENV['VM_BOX']
+  config.vm.box = ENV['BOX_NAME']
 
   # SSH tunnel for localhost-only services (standard port forwarding doesn't work for 127.0.0.1-bound services)
   # Note: Tunnel is only active while `vagrant ssh` session is open
